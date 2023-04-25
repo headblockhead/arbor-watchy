@@ -1,5 +1,5 @@
-#ifndef WATCHY_7_SEG_H
-#define WATCHY_7_SEG_H
+#ifndef WATCHY_HEADBLOCKHEAD_H
+#define WATCHY_HEADBLOCKHEAD_H
 
 #include <Watchy.h>
 #include "Seven_Segment10pt7b.h"
@@ -8,7 +8,7 @@
 #include "DSEG7_Classic_Regular_39.h"
 #include "icons.h"
 
-class Watchy7SEG : public Watchy{
+class WatchyHeadblockhead : public Watchy{
     using Watchy::Watchy;
     public:
         void drawWatchFace();

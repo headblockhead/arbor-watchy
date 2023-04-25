@@ -1,7 +1,7 @@
-#include "Watchy_7_SEG.h"
+#include "Watchy_Headblockhead.h"
 #include "settings.h"
 
-Watchy7SEG watchy(settings);
+WatchyHeadblockhead watchy(settings);
 
 void setup(){
   watchy.init();

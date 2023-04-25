@@ -1,4 +1,4 @@
-#include "Watchy_7_SEG.h"
+#include "Watchy_Headblockhead.h"
 
 #define DARKMODE true
 
@@ -8,7 +8,7 @@ const uint8_t BATTERY_SEGMENT_SPACING = 9;
 const uint8_t WEATHER_ICON_WIDTH = 48;
 const uint8_t WEATHER_ICON_HEIGHT = 32;
 
-void Watchy7SEG::drawWatchFace(){
+void WatchyHeadblockhead::drawWatchFace(){
     display.fillScreen(DARKMODE ? GxEPD_BLACK : GxEPD_WHITE);
     display.setTextColor(DARKMODE ? GxEPD_WHITE : GxEPD_BLACK);
     drawTime();
@@ -22,7 +22,7 @@ void Watchy7SEG::drawWatchFace(){
     }
 }
 
-void Watchy7SEG::drawTime(){
+void WatchyHeadblockhead::drawTime(){
     display.setFont(&DSEG7_Classic_Bold_53);
     display.setCursor(5, 53+5);
     int displayHour;
@@ -42,7 +42,7 @@ void Watchy7SEG::drawTime(){
     display.println(currentTime.Minute);
 }
 
-void Watchy7SEG::drawDate(){
+void WatchyHeadblockhead::drawDate(){
     display.setFont(&Seven_Segment10pt7b);
 
     int16_t  x1, y1;
@@ -70,7 +70,7 @@ void Watchy7SEG::drawDate(){
     display.setCursor(5, 150);
     display.println(tmYearToCalendar(currentTime.Year));// offset from 1970, since year is stored in uint8_t
 }
-void Watchy7SEG::drawSteps(){
+void WatchyHeadblockhead::drawSteps(){
     // reset step counter at midnight
     if (currentTime.Hour == 0 && currentTime.Minute == 0){
       sensor.resetStepCounter();
@@ -80,7 +80,7 @@ void Watchy7SEG::drawSteps(){
     display.setCursor(35, 190);
     display.println(stepCount);
 }
-void Watchy7SEG::drawBattery(){
+void WatchyHeadblockhead::drawBattery(){
     display.drawBitmap(154, 73, battery, 37, 21, DARKMODE ? GxEPD_WHITE : GxEPD_BLACK);
     display.fillRect(159, 78, 27, BATTERY_SEGMENT_HEIGHT, DARKMODE ? GxEPD_BLACK : GxEPD_WHITE);//clear battery segments
     int8_t batteryLevel = 0;
@@ -103,7 +103,7 @@ void Watchy7SEG::drawBattery(){
     }
 }
 
-void Watchy7SEG::drawWeather(){
+void WatchyHeadblockhead::drawWeather(){
 
     weatherData currentWeather = getWeatherData();
 
