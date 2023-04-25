@@ -1,3 +1,5 @@
 .pio
 src/settings.h
 .ccls-cache/
+.ccls
+.clang-format
