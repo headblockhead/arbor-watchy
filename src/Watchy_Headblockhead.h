@@ -14,11 +14,11 @@ class WatchyHeadblockhead : public Watchy {
 
 public:
   void drawWatchFace();
-  void drawTime();
-  void drawDate();
-  void drawSteps();
+  void drawTime(int x, int y);
+  void drawDate(int x, int y);
+  void drawSteps(int x, int y, uint32_t step);
   void drawWeather();
-  void drawBattery();
+  void drawBattery(int x, int y);
   void drawWifi(int x, int y);
   void drawBluetooth(int x, int y);
   virtual void handleButtonPress(); // override default button press handling

@@ -14,23 +14,21 @@ void WatchyHeadblockhead::handleButtonPress() {
     return;
   }
   uint64_t wakeupBit = esp_sleep_get_ext1_wakeup_status();
-  RTC.read(currentTime); // Update the current time.
-  if (wakeupBit & UP_BTN_MASK) {
-    showWatchFace(true); // Redraw the watchface.
-    return;
-  }
-  if (wakeupBit & DOWN_BTN_MASK) {
-    showWatchFace(true); // Redraw the watchface.
-    return;
-  }
-  if (wakeupBit & BACK_BTN_MASK) {
-    showWatchFace(true); // Redraw the watchface.
-    return;
-  }
   if (wakeupBit & MENU_BTN_MASK) {
     Watchy::handleButtonPress(); // Use default button handling for menu button.
     return;
   }
+  RTC.read(currentTime); // Update the current time.
+  if (wakeupBit & UP_BTN_MASK) {
+    return;
+  }
+  if (wakeupBit & DOWN_BTN_MASK) {
+    return;
+  }
+  if (wakeupBit & BACK_BTN_MASK) {
+    return;
+  }
+  showWatchFace(true); // True for partial refresh.
   return;
 }
 
@@ -38,8 +36,39 @@ void WatchyHeadblockhead::drawWatchFace() {
   display.fillScreen(isDark ? GxEPD_BLACK : GxEPD_WHITE);
   display.setTextColor(isDark ? GxEPD_WHITE : GxEPD_BLACK);
   // Screen bounds: 200x200
-  drawWifi(0, 0);       // 26x18
-  drawBluetooth(27, 0); // 13x21
+
+  // Top statusbar: 200x25
+  drawBattery(2, 2);    // 40x20
+  drawWifi(43, 4);      // 26x18
+  drawBluetooth(72, 2); // 13x20
+  display.drawLine(0, 25, 85, 25, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(85, 25, 93, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  // Top Right: 118x25
+  drawSteps(100, 4, sensor.getCounter()); // 116x20
+
+  // Main time.
+  drawTime(5, 85);   // 200x100
+  drawDate(39, 100); // 118x25
+}
+void WatchyHeadblockhead::drawBattery(int x, int y) {
+  display.drawBitmap(x, y, battery, 37, 21, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.fillRect(x + 5, y + 5, 27, BATTERY_SEGMENT_HEIGHT, isDark ? GxEPD_BLACK : GxEPD_WHITE); // clear battery segments
+  int8_t batteryLevel = 0;
+  float VBAT = getBatteryVoltage();
+  if (VBAT > 4.1) {
+    batteryLevel = 3;
+  } else if (VBAT > 3.95 && VBAT <= 4.1) {
+    batteryLevel = 2;
+  } else if (VBAT > 3.80 && VBAT <= 3.95) {
+    batteryLevel = 1;
+  } else if (VBAT <= 3.80) {
+    batteryLevel = 0;
+  }
+
+  for (int8_t batterySegments = 0; batterySegments < batteryLevel; batterySegments++) {
+    display.fillRect(x + 5 + (batterySegments * BATTERY_SEGMENT_SPACING), y + 5, BATTERY_SEGMENT_WIDTH, BATTERY_SEGMENT_HEIGHT, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  }
 }
 void WatchyHeadblockhead::drawWifi(int x, int y) {
   display.drawBitmap(x, y, WIFI_CONFIGURED ? wifi : wifioff, 26, 18, isDark ? GxEPD_WHITE : GxEPD_BLACK);
@@ -48,83 +77,46 @@ void WatchyHeadblockhead::drawBluetooth(int x, int y) {
   display.drawBitmap(x, y, BLE_CONFIGURED ? bluetooth : bluetoothoff, 13, 21, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 }
 
-/*void WatchyHeadblockhead::drawTime() {*/
-/*display.setFont(&DSEG7_Classic_Bold_53);*/
-/*display.setCursor(5, 53 + 5);*/
-/*int displayHour;*/
-/*if (HOUR_12_24 == 12) {*/
-/*displayHour = ((currentTime.Hour + 11) % 12) + 1;*/
-/*} else {*/
-/*displayHour = currentTime.Hour;*/
-/*}*/
-/*if (displayHour < 10) {*/
-/*display.print("0");*/
-/*}*/
-/*display.print(displayHour);*/
-/*display.print(":");*/
-/*if (currentTime.Minute < 10) {*/
-/*display.print("0");*/
-/*}*/
-/*display.println(currentTime.Minute);*/
-/*}*/
+void WatchyHeadblockhead::drawTime(int x, int y) {
+  display.setFont(&DSEG7_Classic_Bold_53);
+  display.setCursor(x, y);
+  int displayHour;
+  if (HOUR_12_24 == 12) {
+    displayHour = ((currentTime.Hour + 11) % 12) + 1;
+  } else {
+    displayHour = currentTime.Hour;
+  }
+  if (displayHour < 10) {
+    display.print("0");
+  }
+  display.print(displayHour);
+  display.print(":");
+  if (currentTime.Minute < 10) {
+    display.print("0");
+  }
+  display.println(currentTime.Minute);
+}
 
-/*void WatchyHeadblockhead::drawDate() {*/
-/*display.setFont(&Seven_Segment10pt7b);*/
+void WatchyHeadblockhead::drawDate(int x, int y) {
+  display.setFont(&DSEG7_Classic_Bold_25);
+  String dayOfWeek = dayShortStr(currentTime.Wday);
+  String date = dayOfWeek.substring(0, 3) + " " + currentTime.Day;
+  display.setCursor(x, y + 20);
+  display.println(date);
+}
 
-/*int16_t x1, y1;*/
-/*uint16_t w, h;*/
-
-/*String dayOfWeek = dayStr(currentTime.Wday);*/
-/*display.getTextBounds(dayOfWeek, 5, 85, &x1, &y1, &w, &h);*/
-/*if (currentTime.Wday == 4) {*/
-/*w = w - 5;*/
-/*}*/
-/*display.setCursor(85 - w, 85);*/
-/*display.println(dayOfWeek);*/
-
-/*String month = monthShortStr(currentTime.Month);*/
-/*display.getTextBounds(month, 60, 110, &x1, &y1, &w, &h);*/
-/*display.setCursor(85 - w, 110);*/
-/*display.println(month);*/
-
-/*display.setFont(&DSEG7_Classic_Bold_25);*/
-/*display.setCursor(5, 120);*/
-/*if (currentTime.Day < 10) {*/
-/*display.print("0");*/
-/*}*/
-/*display.println(currentTime.Day);*/
-/*display.setCursor(5, 150);*/
-/*display.println(tmYearToCalendar(currentTime.Year)); // offset from 1970, since year is stored in uint8_t*/
-/*}*/
-/*void WatchyHeadblockhead::drawSteps() {*/
-/*// reset step counter at midnight*/
-/*if (currentTime.Hour == 0 && currentTime.Minute == 0) {*/
-/*sensor.resetStepCounter();*/
-/*}*/
-/*uint32_t stepCount = sensor.getCounter();*/
-/*display.drawBitmap(10, 165, steps, 19, 23, isDark ? GxEPD_WHITE : GxEPD_BLACK);*/
-/*display.setCursor(35, 190);*/
-/*display.println(stepCount);*/
-/*}*/
-/*void WatchyHeadblockhead::drawBattery() {*/
-/*display.drawBitmap(154, 73, battery, 37, 21, isDark ? GxEPD_WHITE : GxEPD_BLACK);*/
-/*display.fillRect(159, 78, 27, BATTERY_SEGMENT_HEIGHT, isDark ? GxEPD_BLACK : GxEPD_WHITE); // clear battery segments*/
-/*int8_t batteryLevel = 0;*/
-/*float VBAT = getBatteryVoltage();*/
-/*if (VBAT > 4.1) {*/
-/*batteryLevel = 3;*/
-/*} else if (VBAT > 3.95 && VBAT <= 4.1) {*/
-/*batteryLevel = 2;*/
-/*} else if (VBAT > 3.80 && VBAT <= 3.95) {*/
-/*batteryLevel = 1;*/
-/*} else if (VBAT <= 3.80) {*/
-/*batteryLevel = 0;*/
-/*}*/
-
-/*for (int8_t batterySegments = 0; batterySegments < batteryLevel; batterySegments++) {*/
-/*display.fillRect(159 + (batterySegments * BATTERY_SEGMENT_SPACING), 78, BATTERY_SEGMENT_WIDTH, BATTERY_SEGMENT_HEIGHT, isDark ? GxEPD_WHITE : GxEPD_BLACK);*/
-/*}*/
-/*}*/
+void WatchyHeadblockhead::drawSteps(int x, int y, uint32_t step) {
+  // reset step counter at midnight
+  if (currentTime.Hour == 0 && currentTime.Minute == 0) {
+    sensor.resetStepCounter();
+  }
+  display.drawBitmap(x, y - 2, steps, 19, 23, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.setFont(&DSEG7_Classic_Regular_15);
+  display.setCursor(x + 23, y + 18);
+  char s[6];
+  sprintf(s, "%05d", step);
+  display.println(s);
+}
 
 /*void WatchyHeadblockhead::drawWeather() {*/
 
