@@ -1,12 +1,5 @@
 #include "Watchy_Headblockhead.h"
 
-// RTC_DATA_ATTR tells the compiler to store the variable in RTC slow memory - it will stay there when the watch is in deep sleep
-RTC_DATA_ATTR watchyHeadblockheadSettings extraSettings{
-    .is12Hrs = false,
-    .sunRiseTime = 0,
-    .sunSetTime = 0,
-};
-
 void WatchyHeadblockhead::handleButtonPress() {
 
   if (guiState != WATCHFACE_STATE) { // If we are not on the watchface, don't use custom button handling.
@@ -26,7 +19,7 @@ void WatchyHeadblockhead::handleButtonPress() {
   } else if (wakeupBit & UP_BTN_MASK) {
   } else if (wakeupBit & DOWN_BTN_MASK) {
     vibMotor(10, 10);
-    headblockheadSettings.is12Hrs = !headblockheadSettings.is12Hrs;
+    headblockheadSettings->is12Hrs = !headblockheadSettings->is12Hrs;
   } else if (wakeupBit & BACK_BTN_MASK) {
   }
   drawWatchFace();
@@ -39,11 +32,11 @@ bool isDark = false;
 void WatchyHeadblockhead::drawWatchFace() {
   // If after sunset, switch to night mode.
 
-  if ((currentTime.Hour == 0 && currentTime.Minute == 1) || headblockheadSettings.sunRiseTime == 0 || headblockheadSettings.sunSetTime == 0) {
-    getSunriseSunset(&headblockheadSettings.sunRiseTime, &headblockheadSettings.sunSetTime);
+  if ((currentTime.Hour == 0 && currentTime.Minute == 1) || headblockheadSettings->sunRiseTime == 0 || headblockheadSettings->sunSetTime == 0) {
+    getSunriseSunset(&headblockheadSettings->sunRiseTime, &headblockheadSettings->sunSetTime);
   }
 
-  isDark = ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) < headblockheadSettings.sunRiseTime || ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) > headblockheadSettings.sunSetTime;
+  isDark = ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) < headblockheadSettings->sunRiseTime || ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) > headblockheadSettings->sunSetTime;
 
   // Set the colors.
   display.fillScreen(isDark ? GxEPD_BLACK : GxEPD_WHITE);
@@ -63,17 +56,28 @@ void WatchyHeadblockhead::drawWatchFace() {
   // Top Right widget:
   drawSteps(111, 6, sensor.getCounter());
   // Bottom line
-  display.drawLine(108, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(110, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   // Left line
-  display.drawLine(103, 0, 108, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(102, 0, 110, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
   // Main time.
-  drawTime(5, 125);  // 200x100
-  drawDate(39, 140); // 118x25
+  drawTime(5, 110);  // 200x100
+  drawDate(39, 125); // 118x25
 
-  // Top Left: Sunrise/Sunset
-  drawSunriseSunset(5, 178, headblockheadSettings.sunRiseTime, headblockheadSettings.sunSetTime); // 95x95
+  // Bottom Bar
+  drawSunriseSunset(5, 176, headblockheadSettings->sunRiseTime, headblockheadSettings->sunSetTime); // 95x95
 
+  // Left:
+  //  Top line
+  display.drawLine(0, 170, 90, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Right line
+  display.drawLine(90, 170, 98, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  // Right:
+  // Top line
+  display.drawLine(110, 170, 200, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Left line
+  display.drawLine(102, 200, 110, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   return;
 }
 
@@ -109,7 +113,7 @@ void WatchyHeadblockhead::drawTime(int x, int y) {
   display.setFont(&DSEG7_Classic_Bold_53);
   display.setCursor(x, y);
   int displayHour;
-  if (headblockheadSettings.is12Hrs) {
+  if (headblockheadSettings->is12Hrs) {
     displayHour = ((currentTime.Hour + 11) % 12) + 1;
   } else {
     displayHour = currentTime.Hour;
@@ -127,7 +131,7 @@ void WatchyHeadblockhead::drawTime(int x, int y) {
   // Draw the AM/PM indicator.
   display.setFont(&Seven_Segment10pt7b);
   display.setCursor(x + 159, y + 18);
-  if (headblockheadSettings.is12Hrs) {
+  if (headblockheadSettings->is12Hrs) {
     if (currentTime.Hour < 12) {
       display.println("AM");
     } else {
@@ -160,7 +164,7 @@ void WatchyHeadblockhead::drawSteps(int x, int y, uint32_t step) {
   display.println(s);
 }
 
-// headblockheadSettings.sunRiseTime and headblockheadSettings.sunSetTime are ints of seconds since midnight
+// headblockheadSettings->sunRiseTime and headblockheadSettings->sunSetTime are ints of seconds since midnight
 void WatchyHeadblockhead::getSunriseSunset(int *sunRiseTime, int *sunSetTime) {
   // Get OpenWeatherMap data
   if (connectWiFi()) {
@@ -198,17 +202,17 @@ void WatchyHeadblockhead::drawSunriseSunset(int x, int y, int sunRiseTime, int s
   display.drawBitmap(x, y, sunrise, 20, 20, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.setFont(&DSEG7_Classic_Regular_15);
   display.setCursor(x + 25, y + 18);
-  if (headblockheadSettings.is12Hrs) {
-    sprintf(s, "%02d:%02d", ((sunRiseTime / 3600) % 12) + 12, (sunRiseTime / 60) % 60);
+  if (headblockheadSettings->is12Hrs) {
+    sprintf(s, "%02d:%02d", ((sunRiseTime / 3600) % 12), (sunRiseTime / 60) % 60);
   } else {
     sprintf(s, "%02d:%02d", (sunRiseTime / 3600) % 24, (sunRiseTime / 60) % 60);
   }
   display.println(s);
 
-  display.drawBitmap(x + 113, y, sunset, 20, 20, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.setCursor(x + 135, y + 18);
-  if (headblockheadSettings.is12Hrs) {
-    sprintf(s, "%02d:%02d", ((sunSetTime / 3600) % 12) + 12, (sunSetTime / 60) % 60);
+  display.drawBitmap(x + 110, y, sunset, 20, 20, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.setCursor(x + 133, y + 18);
+  if (headblockheadSettings->is12Hrs) {
+    sprintf(s, "%02d:%02d", ((sunSetTime / 3600) % 12), (sunSetTime / 60) % 60);
   } else {
     sprintf(s, "%02d:%02d", (sunSetTime / 3600) % 24, (sunSetTime / 60) % 60);
   }

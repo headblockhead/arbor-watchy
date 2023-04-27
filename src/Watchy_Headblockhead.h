@@ -19,7 +19,7 @@ class WatchyHeadblockhead : public Watchy {
   using Watchy::Watchy;
 
 public:
-  watchyHeadblockheadSettings headblockheadSettings;
+  watchyHeadblockheadSettings *headblockheadSettings;
   void drawWatchFace();
   void getSunriseSunset(int *sunRiseTime, int *sunSetTime);
   void drawSunriseSunset(int x, int y, int sunRiseTime, int sunSetTime);
