@@ -1,59 +1,85 @@
 #include "Watchy_Headblockhead.h"
 
-const uint8_t BATTERY_SEGMENT_WIDTH = 7;
-const uint8_t BATTERY_SEGMENT_HEIGHT = 11;
-const uint8_t BATTERY_SEGMENT_SPACING = 9;
-const uint8_t WEATHER_ICON_WIDTH = 48;
-const uint8_t WEATHER_ICON_HEIGHT = 32;
-
-bool isDark = false;
+// RTC_DATA_ATTR tells the compiler to store the variable in RTC slow memory - it will stay there when the watch is in deep sleep
+RTC_DATA_ATTR watchyHeadblockheadSettings extraSettings{
+    .is12Hrs = false,
+    .sunRiseTime = 0,
+    .sunSetTime = 0,
+};
 
 void WatchyHeadblockhead::handleButtonPress() {
+
   if (guiState != WATCHFACE_STATE) { // If we are not on the watchface, don't use custom button handling.
     Watchy::handleButtonPress();
     return;
   }
+
   uint64_t wakeupBit = esp_sleep_get_ext1_wakeup_status();
+  if (wakeupBit) {
+    RTC.read(currentTime); // Update the current time.
+  }
+
   if (wakeupBit & MENU_BTN_MASK) {
-    Watchy::handleButtonPress(); // Use default button handling for menu button.
+    vibMotor(10, 10);
+    Watchy::handleButtonPress();
     return;
+  } else if (wakeupBit & UP_BTN_MASK) {
+  } else if (wakeupBit & DOWN_BTN_MASK) {
+    vibMotor(10, 10);
+    headblockheadSettings.is12Hrs = !headblockheadSettings.is12Hrs;
+  } else if (wakeupBit & BACK_BTN_MASK) {
   }
-  RTC.read(currentTime); // Update the current time.
-  if (wakeupBit & UP_BTN_MASK) {
-    return;
-  }
-  if (wakeupBit & DOWN_BTN_MASK) {
-    return;
-  }
-  if (wakeupBit & BACK_BTN_MASK) {
-    return;
-  }
-  showWatchFace(true); // True for partial refresh.
+  drawWatchFace();
+  Watchy::showWatchFace(true);
   return;
 }
 
+bool isDark = false;
+
 void WatchyHeadblockhead::drawWatchFace() {
+  // If after sunset, switch to night mode.
+
+  if ((currentTime.Hour == 0 && currentTime.Minute == 1) || headblockheadSettings.sunRiseTime == 0 || headblockheadSettings.sunSetTime == 0) {
+    getSunriseSunset(&headblockheadSettings.sunRiseTime, &headblockheadSettings.sunSetTime);
+  }
+
+  isDark = ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) < headblockheadSettings.sunRiseTime || ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) > headblockheadSettings.sunSetTime;
+
+  // Set the colors.
   display.fillScreen(isDark ? GxEPD_BLACK : GxEPD_WHITE);
   display.setTextColor(isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
   // Screen bounds: 200x200
 
-  // Top statusbar: 200x25
-  drawBattery(2, 2);    // 40x20
-  drawWifi(43, 4);      // 26x18
-  drawBluetooth(72, 2); // 13x20
-  display.drawLine(0, 25, 85, 25, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.drawLine(85, 25, 93, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Top Left widget:
+  drawBattery(2, 5);    // 40x20
+  drawWifi(42, 6);      // 26x18
+  drawBluetooth(72, 5); // 13x20
+  // Bottom line
+  display.drawLine(0, 30, 90, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Right line
+  display.drawLine(90, 30, 98, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-  // Top Right: 118x25
-  drawSteps(100, 4, sensor.getCounter()); // 116x20
+  // Top Right widget:
+  drawSteps(111, 6, sensor.getCounter());
+  // Bottom line
+  display.drawLine(108, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Left line
+  display.drawLine(103, 0, 108, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
   // Main time.
-  drawTime(5, 85);   // 200x100
-  drawDate(39, 100); // 118x25
+  drawTime(5, 125);  // 200x100
+  drawDate(39, 140); // 118x25
+
+  // Top Left: Sunrise/Sunset
+  drawSunriseSunset(5, 178, headblockheadSettings.sunRiseTime, headblockheadSettings.sunSetTime); // 95x95
+
+  return;
 }
+
 void WatchyHeadblockhead::drawBattery(int x, int y) {
   display.drawBitmap(x, y, battery, 37, 21, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.fillRect(x + 5, y + 5, 27, BATTERY_SEGMENT_HEIGHT, isDark ? GxEPD_BLACK : GxEPD_WHITE); // clear battery segments
+  display.fillRect(x + 5, y + 5, 27, 11, isDark ? GxEPD_BLACK : GxEPD_WHITE); // clear battery segments
   int8_t batteryLevel = 0;
   float VBAT = getBatteryVoltage();
   if (VBAT > 4.1) {
@@ -67,12 +93,14 @@ void WatchyHeadblockhead::drawBattery(int x, int y) {
   }
 
   for (int8_t batterySegments = 0; batterySegments < batteryLevel; batterySegments++) {
-    display.fillRect(x + 5 + (batterySegments * BATTERY_SEGMENT_SPACING), y + 5, BATTERY_SEGMENT_WIDTH, BATTERY_SEGMENT_HEIGHT, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    display.fillRect(x + 5 + (batterySegments * 9), y + 5, 7, 11, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   }
 }
+
 void WatchyHeadblockhead::drawWifi(int x, int y) {
   display.drawBitmap(x, y, WIFI_CONFIGURED ? wifi : wifioff, 26, 18, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 }
+
 void WatchyHeadblockhead::drawBluetooth(int x, int y) {
   display.drawBitmap(x, y, BLE_CONFIGURED ? bluetooth : bluetoothoff, 13, 21, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 }
@@ -81,7 +109,7 @@ void WatchyHeadblockhead::drawTime(int x, int y) {
   display.setFont(&DSEG7_Classic_Bold_53);
   display.setCursor(x, y);
   int displayHour;
-  if (HOUR_12_24 == 12) {
+  if (headblockheadSettings.is12Hrs) {
     displayHour = ((currentTime.Hour + 11) % 12) + 1;
   } else {
     displayHour = currentTime.Hour;
@@ -95,6 +123,20 @@ void WatchyHeadblockhead::drawTime(int x, int y) {
     display.print("0");
   }
   display.println(currentTime.Minute);
+
+  // Draw the AM/PM indicator.
+  display.setFont(&Seven_Segment10pt7b);
+  display.setCursor(x + 159, y + 18);
+  if (headblockheadSettings.is12Hrs) {
+    if (currentTime.Hour < 12) {
+      display.println("AM");
+    } else {
+      display.println("PM");
+    }
+  } else {
+    display.setCursor(x + 153, y + 16);
+    display.println("24H");
+  }
 }
 
 void WatchyHeadblockhead::drawDate(int x, int y) {
@@ -118,6 +160,63 @@ void WatchyHeadblockhead::drawSteps(int x, int y, uint32_t step) {
   display.println(s);
 }
 
+// headblockheadSettings.sunRiseTime and headblockheadSettings.sunSetTime are ints of seconds since midnight
+void WatchyHeadblockhead::getSunriseSunset(int *sunRiseTime, int *sunSetTime) {
+  // Get OpenWeatherMap data
+  if (connectWiFi()) {
+    HTTPClient http;              // Use Weather API for live data if WiFi is connected
+    http.setConnectTimeout(3000); // 3 second max timeout
+    String weatherQueryURL = settings.weatherURL + settings.cityID + String("&units=") + settings.weatherUnit + String("&lang=") + settings.weatherLang + String("&appid=") + settings.weatherAPIKey;
+    http.begin(weatherQueryURL.c_str());
+    int httpResponseCode = http.GET();
+    if (httpResponseCode == 200) {
+      String payload = http.getString();
+      JSONVar responseObject = JSON.parse(payload);
+      if (JSON.typeof(responseObject) == "undefined") {
+        Serial.println("Parsing input failed!");
+        return;
+      }
+      *sunRiseTime = (int)responseObject["sys"]["sunrise"] + (int)responseObject["timezone"];
+      *sunSetTime = (int)responseObject["sys"]["sunset"] + (int)responseObject["timezone"];
+      int gmtOffset = int(responseObject["timezone"]);
+      syncNTP(gmtOffset);
+    } else {
+      // http error
+    }
+    http.end();
+    // turn off radios
+    WiFi.mode(WIFI_OFF);
+    btStop();
+  } else {                // No WiFi, use clock for sunrise/sunset
+    *sunRiseTime = 25200; // 7am
+    *sunSetTime = 72000;  // 8pm
+  }
+}
+
+void WatchyHeadblockhead::drawSunriseSunset(int x, int y, int sunRiseTime, int sunSetTime) {
+  char s[6];
+  display.drawBitmap(x, y, sunrise, 20, 20, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.setFont(&DSEG7_Classic_Regular_15);
+  display.setCursor(x + 25, y + 18);
+  if (headblockheadSettings.is12Hrs) {
+    sprintf(s, "%02d:%02d", ((sunRiseTime / 3600) % 12) + 12, (sunRiseTime / 60) % 60);
+  } else {
+    sprintf(s, "%02d:%02d", (sunRiseTime / 3600) % 24, (sunRiseTime / 60) % 60);
+  }
+  display.println(s);
+
+  display.drawBitmap(x + 113, y, sunset, 20, 20, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.setCursor(x + 135, y + 18);
+  if (headblockheadSettings.is12Hrs) {
+    sprintf(s, "%02d:%02d", ((sunSetTime / 3600) % 12) + 12, (sunSetTime / 60) % 60);
+  } else {
+    sprintf(s, "%02d:%02d", (sunSetTime / 3600) % 24, (sunSetTime / 60) % 60);
+  }
+  display.println(s);
+}
+
+const uint8_t WEATHER_ICON_WIDTH = 48;
+const uint8_t WEATHER_ICON_HEIGHT = 32;
 /*void WatchyHeadblockhead::drawWeather() {*/
 
 /*weatherData currentWeather = getWeatherData();*/
