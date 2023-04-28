@@ -32,7 +32,7 @@ bool isDark = false;
 void WatchyHeadblockhead::drawWatchFace() {
   // If after sunset, switch to night mode.
 
-  if ((currentTime.Hour == 0 && currentTime.Minute == 1) || headblockheadSettings->sunRiseTime == 0 || headblockheadSettings->sunSetTime == 0) {
+  if ((currentTime.Minute == 0) || headblockheadSettings->sunRiseTime == 0 || headblockheadSettings->sunSetTime == 0) {
     getSunriseSunset(&headblockheadSettings->sunRiseTime, &headblockheadSettings->sunSetTime);
   }
 
