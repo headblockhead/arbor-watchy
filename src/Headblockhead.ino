@@ -11,6 +11,8 @@ RTC_DATA_ATTR watchyHeadblockheadSettings extraSettings{
 };
 
 void setup(){
+    Serial.begin(9600);
+    Serial.flush();
 watchy.headblockheadSettings = &extraSettings;
   watchy.init();
 }

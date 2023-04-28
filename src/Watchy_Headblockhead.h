@@ -11,8 +11,8 @@
 
 typedef struct watchyHeadblockheadSettings {
   bool is12Hrs;
-  int sunRiseTime;
-  int sunSetTime;
+  float sunRiseTime;
+  float sunSetTime;
 } watchyHeadblockheadSettings;
 
 class WatchyHeadblockhead : public Watchy {
@@ -21,7 +21,7 @@ class WatchyHeadblockhead : public Watchy {
 public:
   watchyHeadblockheadSettings *headblockheadSettings;
   void drawWatchFace();
-  void getSunriseSunset(int *sunRiseTime, int *sunSetTime);
+  void getSunriseSunset(float *sunRiseTime, float *sunSetTime);
   void drawSunriseSunset(int x, int y, int sunRiseTime, int sunSetTime);
   void drawTime(int x, int y);
   void drawDate(int x, int y);

@@ -32,11 +32,11 @@ bool isDark = false;
 void WatchyHeadblockhead::drawWatchFace() {
   // If after sunset, switch to night mode.
 
-  if ((currentTime.Minute == 0) || headblockheadSettings->sunRiseTime == 0 || headblockheadSettings->sunSetTime == 0) {
+  if ((currentTime.Minute == 1) || headblockheadSettings->sunRiseTime == 0 || headblockheadSettings->sunSetTime == 0) {
     getSunriseSunset(&headblockheadSettings->sunRiseTime, &headblockheadSettings->sunSetTime);
   }
 
-  isDark = ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) < headblockheadSettings->sunRiseTime || ((currentTime.Second) + (60 * currentTime.Minute) + (3600 * currentTime.Hour)) > headblockheadSettings->sunSetTime;
+  isDark = ((currentTime.Second) + (60 * currentTime.Minute) + (60 * 60 * currentTime.Hour)) < headblockheadSettings->sunRiseTime || ((currentTime.Second) + (60 * currentTime.Minute) + (60 * 60 * currentTime.Hour)) > headblockheadSettings->sunSetTime;
 
   // Set the colors.
   display.fillScreen(isDark ? GxEPD_BLACK : GxEPD_WHITE);
@@ -165,7 +165,7 @@ void WatchyHeadblockhead::drawSteps(int x, int y, uint32_t step) {
 }
 
 // headblockheadSettings->sunRiseTime and headblockheadSettings->sunSetTime are ints of seconds since midnight
-void WatchyHeadblockhead::getSunriseSunset(int *sunRiseTime, int *sunSetTime) {
+void WatchyHeadblockhead::getSunriseSunset(float *sunRiseTime, float *sunSetTime) {
   // Get OpenWeatherMap data
   if (connectWiFi()) {
     HTTPClient http;              // Use Weather API for live data if WiFi is connected
@@ -180,8 +180,10 @@ void WatchyHeadblockhead::getSunriseSunset(int *sunRiseTime, int *sunSetTime) {
         Serial.println("Parsing input failed!");
         return;
       }
-      *sunRiseTime = (int)responseObject["sys"]["sunrise"] + (int)responseObject["timezone"];
-      *sunSetTime = (int)responseObject["sys"]["sunset"] + (int)responseObject["timezone"];
+      // Get sunrise/sunset times
+      *sunRiseTime = ((int)responseObject["sys"]["sunrise"] + (int)responseObject["timezone"]) % 86400;
+      ;
+      *sunSetTime = ((int)responseObject["sys"]["sunset"] + (int)responseObject["timezone"]) % 86400;
       int gmtOffset = int(responseObject["timezone"]);
       syncNTP(gmtOffset);
     } else {
