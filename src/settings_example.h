@@ -16,6 +16,10 @@
 #define NTP_SERVER "pool.ntp.org"
 #define GMT_OFFSET_SEC 3600 * -5 // New York is UTC -5 EST, -4 EDT, will be overwritten by weather data
 
+// Arbor settings
+#define ARBOR_API_KEY = "example"
+#define ARBOR_API_URL = "https://example.com"
+
 watchySettings settings{
     .cityID = CITY_ID,
     .weatherAPIKey = OPENWEATHERMAP_APIKEY,

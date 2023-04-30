@@ -9,10 +9,19 @@
 #include "Seven_Segment10pt7b.h"
 #include "icons.h"
 
+enum watchyHeadblockheadState { Home, Menu, Arbor };
+
 typedef struct watchyHeadblockheadSettings {
   bool is12Hrs;
   float sunRiseTime;
   float sunSetTime;
+  String arborattendance;
+  String arborpoints;
+  String arbortimetable;
+  String arborweek;
+  String arborURL;
+  String arborAPIKey;
+  watchyHeadblockheadState state;
 } watchyHeadblockheadSettings;
 
 class WatchyHeadblockhead : public Watchy {
@@ -20,6 +29,7 @@ class WatchyHeadblockhead : public Watchy {
 
 public:
   watchyHeadblockheadSettings *headblockheadSettings;
+  void getArbor(float *attendance, int *points, std::vector<String> *timetable, String *week);
   void drawWatchFace();
   void getSunriseSunset(float *sunRiseTime, float *sunSetTime);
   void drawSunriseSunset(int x, int y, int sunRiseTime, int sunSetTime);

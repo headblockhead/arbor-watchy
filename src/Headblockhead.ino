@@ -8,6 +8,13 @@ RTC_DATA_ATTR watchyHeadblockheadSettings extraSettings{
     .is12Hrs = false,
     .sunRiseTime = 0,
     .sunSetTime = 0,
+.arborattendance = "",
+.arborpoints = "",
+.arbortimetable = "",
+   .arborweek = "",
+    .arborURL = ARBOR_API_URL,
+    .arborAPIKey = ARBOR_API_KEY,
+    .state = Home,
 };
 
 void setup(){

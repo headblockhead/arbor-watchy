@@ -1,4 +1,5 @@
 #include "Watchy_Headblockhead.h"
+#include <cstdlib>
 
 void WatchyHeadblockhead::handleButtonPress() {
 
@@ -14,13 +15,23 @@ void WatchyHeadblockhead::handleButtonPress() {
 
   if (wakeupBit & MENU_BTN_MASK) {
     vibMotor(10, 10);
-    Watchy::handleButtonPress();
+    if (headblockheadSettings->state == Menu) {
+      Watchy::showMenu(0, false);
+    } else if (headblockheadSettings->state == Home) {
+      headblockheadSettings->state = Menu;
+    }
+    drawWatchFace();
+    Watchy::showWatchFace(false);
     return;
   } else if (wakeupBit & UP_BTN_MASK) {
   } else if (wakeupBit & DOWN_BTN_MASK) {
     vibMotor(10, 10);
     headblockheadSettings->is12Hrs = !headblockheadSettings->is12Hrs;
   } else if (wakeupBit & BACK_BTN_MASK) {
+    if (headblockheadSettings->state == Menu) {
+      headblockheadSettings->state = Home;
+    } else if (headblockheadSettings->state == Home) {
+    }
   }
   drawWatchFace();
   Watchy::showWatchFace(true);
@@ -42,42 +53,55 @@ void WatchyHeadblockhead::drawWatchFace() {
   display.fillScreen(isDark ? GxEPD_BLACK : GxEPD_WHITE);
   display.setTextColor(isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-  // Screen bounds: 200x200
+  if (headblockheadSettings->state == Home) {
+    // Screen bounds: 200x200
 
-  // Top Left widget:
-  drawBattery(2, 5);    // 40x20
-  drawWifi(42, 6);      // 26x18
-  drawBluetooth(72, 5); // 13x20
-  // Bottom line
-  display.drawLine(0, 30, 90, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  // Right line
-  display.drawLine(90, 30, 98, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Top Left widget:
+    drawBattery(2, 5);    // 40x20
+    drawWifi(42, 6);      // 26x18
+    drawBluetooth(72, 5); // 13x20
+    // Bottom line
+    display.drawLine(0, 30, 90, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Right line
+    display.drawLine(90, 30, 98, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-  // Top Right widget:
-  drawSteps(111, 6, sensor.getCounter());
-  // Bottom line
-  display.drawLine(110, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  // Left line
-  display.drawLine(102, 0, 110, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Top Right widget:
+    drawSteps(111, 6, sensor.getCounter());
+    // Bottom line
+    display.drawLine(110, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Left line
+    display.drawLine(102, 0, 110, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-  // Main time.
-  drawTime(5, 110);  // 200x100
-  drawDate(39, 125); // 118x25
+    // Main time.
+    drawTime(5, 110);  // 200x100
+    drawDate(39, 125); // 118x25
 
-  // Bottom Bar
-  drawSunriseSunset(5, 176, headblockheadSettings->sunRiseTime, headblockheadSettings->sunSetTime); // 95x95
+    // Bottom Bar
+    drawSunriseSunset(5, 176, headblockheadSettings->sunRiseTime, headblockheadSettings->sunSetTime); // 95x95
 
-  // Left:
-  //  Top line
-  display.drawLine(0, 170, 90, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  // Right line
-  display.drawLine(90, 170, 98, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Left:
+    //  Top line
+    display.drawLine(0, 170, 90, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Right line
+    display.drawLine(90, 170, 98, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-  // Right:
-  // Top line
-  display.drawLine(110, 170, 200, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  // Left line
-  display.drawLine(102, 200, 110, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Right:
+    //  Top line
+    display.drawLine(110, 170, 200, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+    // Left line
+    display.drawLine(102, 200, 110, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  } // End of Home screen.
+  if (headblockheadSettings->state == Menu) {
+    display.setCursor(0, 0);
+    display.print("Menu");
+  }
+  float attendance;
+  int points;
+  std::vector<String> timetable;
+  String week;
+  getArbor(&attendance, &points, &timetable, &week);
+
   return;
 }
 
@@ -162,6 +186,43 @@ void WatchyHeadblockhead::drawSteps(int x, int y, uint32_t step) {
   char s[6];
   sprintf(s, "%05d", step);
   display.println(s);
+}
+
+void WatchyHeadblockhead::getArbor(float *attendance, int *points, std::vector<String> *timetable, String *week) {
+  if (connectWiFi()) {
+    HTTPClient http;
+    http.setConnectTimeout(3000); // 3 second max timeout
+    String arborURL = headblockheadSettings->arborURL;
+    http.begin(arborURL.c_str());
+    http.addHeader("x-api-key", headblockheadSettings->arborAPIKey);
+    int httpResponseCode = http.GET();
+    if (httpResponseCode == 200) {
+      String payload = http.getString();
+      JSONVar responseObject = JSON.parse(payload);
+      if (JSON.typeof(responseObject) == "undefined") {
+        Serial.println("Parsing input failed!");
+        return;
+      }
+      *attendance = strtof(JSON.stringify(responseObject["attendance"]).c_str(), nullptr);
+      *points = (int)responseObject["points"];
+      int i = 0;
+      while (i < 10) {
+        if (JSON.stringify(responseObject["timetable"][i]) == "" || JSON.stringify(responseObject["timetable"][i]) == "undefined") {
+          break;
+        }
+        timetable->push_back(JSON.stringify(responseObject["timetable"][i]));
+        i++;
+      }
+      *week = JSON.stringify(responseObject["week"]);
+    } else {
+      // http error
+    }
+    http.end();
+    // turn off radios
+    WiFi.mode(WIFI_OFF);
+    btStop();
+  } else {
+  }
 }
 
 // headblockheadSettings->sunRiseTime and headblockheadSettings->sunSetTime are ints of seconds since midnight
