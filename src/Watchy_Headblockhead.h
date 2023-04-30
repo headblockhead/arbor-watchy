@@ -6,6 +6,7 @@
 #include "DSEG7_Classic_Bold_25.h"
 #include "DSEG7_Classic_Regular_15.h"
 #include "DSEG7_Classic_Regular_39.h"
+#include "Ramabhadra_Regular25pt7b.h"
 #include "Ramabhadra_Regular4pt7b.h"
 #include "Seven_Segment10pt7b.h"
 #include "icons.h"
@@ -23,6 +24,7 @@ typedef struct watchyHeadblockheadSettings {
   String arborURL;
   String arborAPIKey;
   watchyHeadblockheadState state;
+  int currentMenuItem;
 } watchyHeadblockheadSettings;
 
 class WatchyHeadblockhead : public Watchy {
@@ -32,6 +34,8 @@ public:
   watchyHeadblockheadSettings *headblockheadSettings;
   void getArbor(float *attendance, int *points, std::vector<String> *timetable, String *week);
   void drawWatchFace();
+  void drawHomeScreen();
+  void drawMenuScreen();
   void getSunriseSunset(float *sunRiseTime, float *sunSetTime);
   void drawSunriseSunset(int x, int y, int sunRiseTime, int sunSetTime);
   void drawTime(int x, int y);

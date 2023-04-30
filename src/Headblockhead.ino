@@ -15,6 +15,7 @@ RTC_DATA_ATTR watchyHeadblockheadSettings extraSettings{
     .arborURL = ARBOR_API_URL,
     .arborAPIKey = ARBOR_API_KEY,
     .state = Home,
+    .currentMenuItem = 0,
 };
 
 void setup(){

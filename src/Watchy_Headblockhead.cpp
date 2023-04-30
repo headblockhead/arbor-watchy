@@ -16,25 +16,87 @@ void WatchyHeadblockhead::handleButtonPress() {
   if (wakeupBit & MENU_BTN_MASK) {
     vibMotor(10, 10);
     if (headblockheadSettings->state == Menu) {
-      Watchy::showMenu(0, false);
+      // Click a menu item.
+      if (headblockheadSettings->currentMenuItem == 0) {
+        // First item: open Watchy menu.
+        Watchy::showMenu(0, false);
+        return;
+      } else if (headblockheadSettings->currentMenuItem == 1) {
+        // Second item: toggle 12/24 hour mode.
+        headblockheadSettings->is12Hrs = !headblockheadSettings->is12Hrs;
+        drawWatchFace();
+        Watchy::showWatchFace(true);
+        return;
+      }
     } else if (headblockheadSettings->state == Home) {
+      // If we are on the home screen, open the menu.
       headblockheadSettings->state = Menu;
+      drawWatchFace();
+      Watchy::showWatchFace(false);
+      return;
+    } else {
+      // Otherwise, pass the button press to Watchy.
+      Watchy::handleButtonPress();
+      return;
     }
-    drawWatchFace();
-    Watchy::showWatchFace(false);
     return;
   } else if (wakeupBit & UP_BTN_MASK) {
+    vibMotor(10, 10);
+    if (headblockheadSettings->state == Menu) {
+      // If we are in the menu, move the cursor up.
+      headblockheadSettings->currentMenuItem--;
+      if (headblockheadSettings->currentMenuItem < 0) {
+        // If we are at the top of the menu, loop back to the bottom.
+        headblockheadSettings->currentMenuItem = 1;
+      }
+      drawWatchFace();             // Redraw the watchface.
+      Watchy::showWatchFace(true); // Apply the changes - true for partial refresh.
+      return;
+    } else if (headblockheadSettings->state == Home) {
+      // If we are on the home screen, do nothing.
+    } else {
+      // Otherwise, pass the button press to the default handler.
+      Watchy::handleButtonPress();
+      return;
+    }
   } else if (wakeupBit & DOWN_BTN_MASK) {
     vibMotor(10, 10);
-    headblockheadSettings->is12Hrs = !headblockheadSettings->is12Hrs;
-  } else if (wakeupBit & BACK_BTN_MASK) {
     if (headblockheadSettings->state == Menu) {
-      headblockheadSettings->state = Home;
+      // If on the menu, move down the menu.
+      headblockheadSettings->currentMenuItem++;
+      if (headblockheadSettings->currentMenuItem > 1) {
+        // If we are at the bottom of the menu, go to the top.
+        headblockheadSettings->currentMenuItem = 0;
+      }
+      drawWatchFace();             // Redraw the watchface.
+      Watchy::showWatchFace(true); // Apply the changes - true for partial refresh.
+      return;
     } else if (headblockheadSettings->state == Home) {
+      // If on the home screen, do nothing.
+    } else {
+      // Otherwise, pass the button press to the default handler.
+      Watchy::handleButtonPress();
+      return;
+    }
+  } else if (wakeupBit & BACK_BTN_MASK) {
+    vibMotor(10, 10);
+    if (headblockheadSettings->state == Menu) {
+      // If on the menu, go back to the home screen.
+      headblockheadSettings->state = Home;
+      drawWatchFace();              // Redraw the watchface.
+      Watchy::showWatchFace(false); // Apply the changes - false for full refresh.
+      return;
+    } else if (headblockheadSettings->state == Home) {
+      // If on the home screen, to nothing.
+    } else {
+      // Otherwise, let the default button handling take over.
+      Watchy::handleButtonPress();
+      return;
     }
   }
-  drawWatchFace();
-  Watchy::showWatchFace(true);
+
+  drawWatchFace();             // Redraw the watchface.
+  Watchy::showWatchFace(true); // Apply the changes - true for partial refresh.
   return;
 }
 
@@ -43,105 +105,141 @@ bool isDark = false;
 void WatchyHeadblockhead::drawWatchFace() {
   // If after sunset, switch to night mode.
 
+  // If sunrise/sunset data is not yet set, or it is the first minute of every hour, update the sunrise/sunset data.
   if ((currentTime.Minute == 1) || headblockheadSettings->sunRiseTime == 0 || headblockheadSettings->sunSetTime == 0) {
     getSunriseSunset(&headblockheadSettings->sunRiseTime, &headblockheadSettings->sunSetTime);
   }
 
+  // If the current time is after sunset, or before sunrise, switch to night mode.
   isDark = ((currentTime.Second) + (60 * currentTime.Minute) + (60 * 60 * currentTime.Hour)) < headblockheadSettings->sunRiseTime || ((currentTime.Second) + (60 * currentTime.Minute) + (60 * 60 * currentTime.Hour)) > headblockheadSettings->sunSetTime;
 
-  // Set the colors.
+  // Set the colors to use.
   display.fillScreen(isDark ? GxEPD_BLACK : GxEPD_WHITE);
   display.setTextColor(isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-  if (headblockheadSettings->state == Home) {
-    // Screen bounds: 200x200
-
-    // Top Left widget:
-    drawBattery(2, 5);    // 40x20
-    drawWifi(42, 6);      // 26x18
-    drawBluetooth(72, 5); // 13x20
-    // Bottom line
-    display.drawLine(0, 30, 90, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Right line
-    display.drawLine(90, 30, 98, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.drawLine(9, 33, 9, 41, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 33, 1, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 41, 1, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(13, 40);
-    display.print("CANCEL");
-
-    // Top Right widget:
-    drawSteps(111, 6, sensor.getCounter());
-    // Bottom line
-    display.drawLine(110, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Left line
-    display.drawLine(102, 0, 110, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.drawLine(191, 33, 191, 41, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 33, 199, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 41, 199, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(176, 40);
-    display.print("UP");
-
-    // Main time.
-    drawTime(5, 110);  // 200x100
-    drawDate(39, 125); // 118x25
-
-    // Bottom Bar
-    drawSunriseSunset(5, 176, headblockheadSettings->sunRiseTime, headblockheadSettings->sunSetTime); // 95x95
-
-    // Left:
-    //  Top line
-    display.drawLine(0, 170, 90, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Right line
-    display.drawLine(90, 170, 98, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.drawLine(9, 167, 9, 159, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 167, 1, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 159, 1, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(13, 165);
-    display.print("MENU");
-
-    // Right:
-    //  Top line
-    display.drawLine(110, 170, 200, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Left line
-    display.drawLine(102, 200, 110, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.drawLine(191, 167, 191, 159, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 167, 199, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 159, 199, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(162, 165);
-    display.print("DOWN");
-
-  } // End of Home screen.
-  if (headblockheadSettings->state == Menu) {
-    display.setCursor(0, 0);
-    display.print("Menu");
+  // If the arbor data is not yet set, or it is the first minute of every hour, update the arbor data.
+  if ((currentTime.Minute == 1) || headblockheadSettings->arborattendance == -1.00 || headblockheadSettings->arborpoints == -1) {
+    getArbor(&headblockheadSettings->arborattendance, &headblockheadSettings->arborpoints, &headblockheadSettings->arbortimetable, &headblockheadSettings->arborweek);
   }
 
-  if (headblockheadSettings->arborattendance == -1.00 || headblockheadSettings->arborpoints == -1 || (currentTime.Minute == 1)) {
-    float attendance;
-    int points;
-    std::vector<String> timetable;
-    String week;
-    getArbor(&attendance, &points, &timetable, &week);
-    headblockheadSettings->arborattendance = attendance;
-    headblockheadSettings->arborpoints = points;
-    headblockheadSettings->arbortimetable = timetable;
-    headblockheadSettings->arborweek = week;
+  // If we are on the home screen, draw the home screen.
+  if (headblockheadSettings->state == Home) {
+    drawHomeScreen();
+  } else if (headblockheadSettings->state == Menu) {
+    drawMenuScreen();
   }
 
   return;
+}
+
+void WatchyHeadblockhead::drawMenuScreen() {
+  display.setFont(&Ramabhadra_Regular25pt7b);
+  display.setCursor(0, 37);
+  display.print("Menu");
+
+  display.drawFastHLine(0, 43, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawFastHLine(0, 44, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawFastHLine(0, 45, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(125, 43, 145, 23, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(125, 44, 145, 24, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(125, 45, 145, 25, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawFastHLine(145, 23, 55, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawFastHLine(146, 24, 54, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawFastHLine(147, 25, 53, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.setFont(&DSEG7_Classic_Regular_15);
+  display.setCursor(143, 20);
+
+  int displayHour;
+  if (headblockheadSettings->is12Hrs) {
+    displayHour = ((currentTime.Hour + 11) % 12) + 1;
+  } else {
+    displayHour = currentTime.Hour;
+  }
+  if (displayHour < 10) {
+    display.print("0");
+  }
+  display.print(displayHour);
+  display.print(":");
+  if (currentTime.Minute < 10) {
+    display.print("0");
+  }
+  display.println(currentTime.Minute);
+
+  display.setFont(&Seven_Segment10pt7b);
+  display.setCursor(0, 60);
+  display.print(headblockheadSettings->currentMenuItem);
+}
+
+void WatchyHeadblockhead::drawHomeScreen() {
+  // Screen bounds: 200x200
+
+  // Top Left widget:
+  drawBattery(2, 5);    // 40x20
+  drawWifi(42, 6);      // 26x18
+  drawBluetooth(72, 5); // 13x20
+  // Bottom line
+  display.drawLine(0, 30, 90, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Right line
+  display.drawLine(90, 30, 98, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.drawLine(9, 33, 9, 41, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(9, 33, 1, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(9, 41, 1, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.setFont(&Ramabhadra_Regular4pt7b);
+  display.setCursor(13, 40);
+  display.print("CANCEL");
+
+  // Top Right widget:
+  drawSteps(111, 6, sensor.getCounter());
+  // Bottom line
+  display.drawLine(110, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Left line
+  display.drawLine(102, 0, 110, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.drawLine(191, 33, 191, 41, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(191, 33, 199, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(191, 41, 199, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.setFont(&Ramabhadra_Regular4pt7b);
+  display.setCursor(176, 40);
+  display.print("UP");
+
+  // Main time.
+  drawTime(5, 110);  // 200x100
+  drawDate(39, 125); // 118x25
+
+  // Bottom Bar
+  drawSunriseSunset(5, 176, headblockheadSettings->sunRiseTime, headblockheadSettings->sunSetTime); // 95x95
+
+  // Left:
+  //  Top line
+  display.drawLine(0, 170, 90, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Right line
+  display.drawLine(90, 170, 98, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.drawLine(9, 167, 9, 159, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(9, 167, 1, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(9, 159, 1, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.setFont(&Ramabhadra_Regular4pt7b);
+  display.setCursor(13, 165);
+  display.print("MENU");
+
+  // Right:
+  //  Top line
+  display.drawLine(110, 170, 200, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Left line
+  display.drawLine(102, 200, 110, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.drawLine(191, 167, 191, 159, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(191, 167, 199, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(191, 159, 199, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  display.setFont(&Ramabhadra_Regular4pt7b);
+  display.setCursor(162, 165);
+  display.print("DOWN");
 }
 
 void WatchyHeadblockhead::drawBattery(int x, int y) {
