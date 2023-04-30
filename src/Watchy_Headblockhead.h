@@ -6,6 +6,7 @@
 #include "DSEG7_Classic_Bold_25.h"
 #include "DSEG7_Classic_Regular_15.h"
 #include "DSEG7_Classic_Regular_39.h"
+#include "Ramabhadra_Regular4pt7b.h"
 #include "Seven_Segment10pt7b.h"
 #include "icons.h"
 
@@ -15,9 +16,9 @@ typedef struct watchyHeadblockheadSettings {
   bool is12Hrs;
   float sunRiseTime;
   float sunSetTime;
-  String arborattendance;
-  String arborpoints;
-  String arbortimetable;
+  float arborattendance;
+  int arborpoints;
+  std::vector<String> arbortimetable;
   String arborweek;
   String arborURL;
   String arborAPIKey;

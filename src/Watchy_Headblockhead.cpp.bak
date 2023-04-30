@@ -1,5 +1,4 @@
 #include "Watchy_Headblockhead.h"
-#include <cstdlib>
 
 void WatchyHeadblockhead::handleButtonPress() {
 
@@ -15,23 +14,13 @@ void WatchyHeadblockhead::handleButtonPress() {
 
   if (wakeupBit & MENU_BTN_MASK) {
     vibMotor(10, 10);
-    if (headblockheadSettings->state == Menu) {
-      Watchy::showMenu(0, false);
-    } else if (headblockheadSettings->state == Home) {
-      headblockheadSettings->state = Menu;
-    }
-    drawWatchFace();
-    Watchy::showWatchFace(false);
+    Watchy::handleButtonPress();
     return;
   } else if (wakeupBit & UP_BTN_MASK) {
   } else if (wakeupBit & DOWN_BTN_MASK) {
     vibMotor(10, 10);
     headblockheadSettings->is12Hrs = !headblockheadSettings->is12Hrs;
   } else if (wakeupBit & BACK_BTN_MASK) {
-    if (headblockheadSettings->state == Menu) {
-      headblockheadSettings->state = Home;
-    } else if (headblockheadSettings->state == Home) {
-    }
   }
   drawWatchFace();
   Watchy::showWatchFace(true);
@@ -53,93 +42,87 @@ void WatchyHeadblockhead::drawWatchFace() {
   display.fillScreen(isDark ? GxEPD_BLACK : GxEPD_WHITE);
   display.setTextColor(isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-  if (headblockheadSettings->state == Home) {
-    // Screen bounds: 200x200
+  // Screen bounds: 200x200
 
-    // Top Left widget:
-    drawBattery(2, 5);    // 40x20
-    drawWifi(42, 6);      // 26x18
-    drawBluetooth(72, 5); // 13x20
-    // Bottom line
-    display.drawLine(0, 30, 90, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Right line
-    display.drawLine(90, 30, 98, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Top Left widget:
+  drawBattery(2, 5);    // 40x20
+  drawWifi(42, 6);      // 26x18
+  drawBluetooth(72, 5); // 13x20
+  // Bottom line
+  display.drawLine(0, 30, 90, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Right line
+  display.drawLine(90, 30, 98, 0, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.drawLine(9, 33, 9, 41, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 33, 1, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 41, 1, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(11, 33, 11, 48, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(11, 33, 1, 40, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(11, 48, 1, 40, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(13, 40);
-    display.print("CANCEL");
+  display.setCursor(15, 47);
+  display.setFont(&Seven_Segment10pt7b);
+  display.print("");
 
-    // Top Right widget:
-    drawSteps(111, 6, sensor.getCounter());
-    // Bottom line
-    display.drawLine(110, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Left line
-    display.drawLine(102, 0, 110, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Top Right widget:
+  drawSteps(111, 6, sensor.getCounter());
+  // Bottom line
+  display.drawLine(110, 30, 200, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Left line
+  display.drawLine(102, 0, 110, 30, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.drawLine(191, 33, 191, 41, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 33, 199, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 41, 199, 38, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(189, 33, 189, 48, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(189, 33, 199, 40, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(189, 48, 199, 40, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(176, 40);
-    display.print("UP");
+  display.setCursor(115, 47);
+  display.setFont(&Seven_Segment10pt7b);
+  display.print("");
 
-    // Main time.
-    drawTime(5, 110);  // 200x100
-    drawDate(39, 125); // 118x25
+  // Main time.
+  drawTime(5, 110);  // 200x100
+  drawDate(39, 125); // 118x25
 
-    // Bottom Bar
-    drawSunriseSunset(5, 176, headblockheadSettings->sunRiseTime, headblockheadSettings->sunSetTime); // 95x95
+  // Bottom Bar
+  drawSunriseSunset(5, 176, headblockheadSettings->sunRiseTime, headblockheadSettings->sunSetTime); // 95x95
 
-    // Left:
-    //  Top line
-    display.drawLine(0, 170, 90, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Right line
-    display.drawLine(90, 170, 98, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Left:
+  //  Top line
+  display.drawLine(0, 170, 90, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Right line
+  display.drawLine(90, 170, 98, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.drawLine(9, 167, 9, 159, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 167, 1, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(9, 159, 1, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Button hint
+  display.drawLine(11, 153, 11, 168, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(11, 153, 1, 160, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(11, 168, 1, 160, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(13, 165);
-    display.print("MENU");
+  display.setCursor(15, 167);
+  display.setFont(&Seven_Segment10pt7b);
+  display.print("MENU");
 
-    // Right:
-    //  Top line
-    display.drawLine(110, 170, 200, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    // Left line
-    display.drawLine(102, 200, 110, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Right:
+  //  Top line
+  display.drawLine(110, 170, 200, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Left line
+  display.drawLine(102, 200, 110, 170, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.drawLine(191, 167, 191, 159, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 167, 199, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-    display.drawLine(191, 159, 199, 162, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  // Button hint
+  display.drawLine(189, 153, 189, 168, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(189, 153, 199, 160, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(189, 168, 199, 160, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
-    display.setFont(&Ramabhadra_Regular4pt7b);
-    display.setCursor(162, 165);
-    display.print("DOWN");
+  display.setCursor(137, 167);
+  display.setFont(&Seven_Segment10pt7b);
+  display.print("ARBOR");
 
-  } // End of Home screen.
-  if (headblockheadSettings->state == Menu) {
-    display.setCursor(0, 0);
-    display.print("Menu");
-  }
+  /*  String attendance;*/
+  /*String points;*/
+  /*String timetable;*/
+  /*String week;*/
+  /*getArbor(&attendance, &points, &timetable, &week);*/
 
-  if (headblockheadSettings->arborattendance == -1.00 || headblockheadSettings->arborpoints == -1 || (currentTime.Minute == 1)) {
-    float attendance;
-    int points;
-    std::vector<String> timetable;
-    String week;
-    getArbor(&attendance, &points, &timetable, &week);
-    headblockheadSettings->arborattendance = attendance;
-    headblockheadSettings->arborpoints = points;
-    headblockheadSettings->arbortimetable = timetable;
-    headblockheadSettings->arborweek = week;
-  }
+  /*Serial.println(attendance);*/
+  /*Serial.println(points);*/
+  /*Serial.println(timetable);*/
+  /*Serial.println(week);*/
 
   return;
 }
@@ -227,7 +210,7 @@ void WatchyHeadblockhead::drawSteps(int x, int y, uint32_t step) {
   display.println(s);
 }
 
-void WatchyHeadblockhead::getArbor(float *attendance, int *points, std::vector<String> *timetable, String *week) {
+void WatchyHeadblockhead::getArbor(String *attendance, String *points, String *timetable, String *week) {
   if (connectWiFi()) {
     HTTPClient http;
     http.setConnectTimeout(3000); // 3 second max timeout
@@ -242,16 +225,9 @@ void WatchyHeadblockhead::getArbor(float *attendance, int *points, std::vector<S
         Serial.println("Parsing input failed!");
         return;
       }
-      *attendance = strtof(JSON.stringify(responseObject["attendance"]).c_str(), nullptr);
-      *points = (int)responseObject["points"];
-      int i = 0;
-      while (i < 10) {
-        if (JSON.stringify(responseObject["timetable"][i]) == "" || JSON.stringify(responseObject["timetable"][i]) == "undefined") {
-          break;
-        }
-        timetable->push_back(JSON.stringify(responseObject["timetable"][i]));
-        i++;
-      }
+      *attendance = JSON.stringify(responseObject["attendance"]);
+      *points = JSON.stringify(responseObject["points"]);
+      *timetable = JSON.stringify(responseObject["timetable"]);
       *week = JSON.stringify(responseObject["week"]);
     } else {
       // http error
