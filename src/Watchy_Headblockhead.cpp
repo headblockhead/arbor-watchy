@@ -543,7 +543,9 @@ void WatchyHeadblockhead::getArbor(double *attendance, int *points, std::vector<
         event.eventStart = (int)responseObject["timetable"][i]["event_start"];
         event.eventEnd = (int)responseObject["timetable"][i]["event_end"];
         event.eventLocation = JSON.stringify(responseObject["timetable"][i]["location"]);
+        event.eventLocation.substring(1, event.eventLocation.length() - 1); // Delete the quotes from the string
         event.eventEvent = JSON.stringify(responseObject["timetable"][i]["event"]);
+        event.eventEvent.substring(1, event.eventEvent.length() - 1); // Delete the quotes from the string
         Serial.println("Event " + String(i) + ": " + event.eventEvent + " at " + event.eventLocation + " from " + String(event.eventStart) + " to " + String(event.eventEnd));
         (*timetable).push_back(event);
       }
