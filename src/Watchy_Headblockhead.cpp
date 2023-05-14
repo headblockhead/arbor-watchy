@@ -1,5 +1,6 @@
 #include "Watchy_Headblockhead.h"
-#include <cstdlib>
+
+std::vector<String> menuItems = {"Open Watchy Menu", "Toggle 12/24H"};
 
 void WatchyHeadblockhead::handleButtonPress() {
 
@@ -47,7 +48,7 @@ void WatchyHeadblockhead::handleButtonPress() {
       headblockheadSettings->currentMenuItem--;
       if (headblockheadSettings->currentMenuItem < 0) {
         // If we are at the top of the menu, loop back to the bottom.
-        headblockheadSettings->currentMenuItem = 1;
+        headblockheadSettings->currentMenuItem = menuItems.size() - 1;
       }
       drawWatchFace();             // Redraw the watchface.
       Watchy::showWatchFace(true); // Apply the changes - true for partial refresh.
@@ -64,7 +65,7 @@ void WatchyHeadblockhead::handleButtonPress() {
     if (headblockheadSettings->state == Menu) {
       // If on the menu, move down the menu.
       headblockheadSettings->currentMenuItem++;
-      if (headblockheadSettings->currentMenuItem > 1) {
+      if (headblockheadSettings->currentMenuItem > menuItems.size() - 1) {
         // If we are at the bottom of the menu, go to the top.
         headblockheadSettings->currentMenuItem = 0;
       }
@@ -101,6 +102,98 @@ void WatchyHeadblockhead::handleButtonPress() {
 }
 
 bool isDark = false;
+std::vector<arborTimetableEvent> tempTimetable;
+
+void WatchyHeadblockhead::singleTimetableToEvent(uint32_t timetable[74], arborTimetableEvent *event) {
+  event->eventStart = timetable[0];
+  event->eventEnd = timetable[1];
+  for (int j = 0; j < 21; j++) {
+    if (timetable[2 + j] != 0) {
+      event->eventLocation += (char)timetable[2 + j];
+    }
+  }
+  for (int j = 0; j < 50; j++) {
+    if (timetable[23 + j] != 0) {
+      event->eventEvent += (char)timetable[23 + j];
+    }
+  }
+}
+
+void WatchyHeadblockhead::timetableToTemp() {
+  tempTimetable.clear();
+  for (int i = 0; i < 10; i++) {
+    // For all 10 possible events, get the data.
+    // The hard part - translate from a list of 74 integers to an arborTimetableEvent.
+
+    // Integer 0: the seconds since midnight when the event starts.
+    // Integer 1: the seconds since midnight when the event ends.
+    // Integer 2-22: the character codes for the event location. Theese need to be translated to a String.
+    // Integer 23-73: the character codes for the event name. Theese need to be translated to a String.
+
+    arborTimetableEvent newEvent = arborTimetableEvent();
+
+    if (i == 0) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent0, &newEvent);
+    } else if (i == 1) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent1, &newEvent);
+    } else if (i == 2) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent2, &newEvent);
+    } else if (i == 3) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent3, &newEvent);
+    } else if (i == 4) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent4, &newEvent);
+    } else if (i == 5) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent5, &newEvent);
+    } else if (i == 6) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent6, &newEvent);
+    } else if (i == 7) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent7, &newEvent);
+    } else if (i == 8) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent8, &newEvent);
+    } else if (i == 9) {
+      singleTimetableToEvent(headblockheadSettings->arbortimetableEvent9, &newEvent);
+    }
+
+    // Add the event to the temporary timetable.
+    tempTimetable.push_back(newEvent);
+  }
+}
+
+void WatchyHeadblockhead::singleEventToTimetable(uint32_t (*timetable)[74], arborTimetableEvent event) {
+  (*timetable)[0] = event.eventStart;
+  (*timetable)[1] = event.eventEnd;
+  for (int j = 0; j < 21; j++) {
+    (*timetable)[2 + j] = event.eventLocation[j];
+  }
+  for (int j = 0; j < 50; j++) {
+    (*timetable)[33 + j] = event.eventEvent[j];
+  }
+}
+void WatchyHeadblockhead::tempToTimetable() {
+  for (int i = 0; i < tempTimetable.size(); i++) {
+    if (i == 0) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent0, tempTimetable[i]);
+    } else if (i == 1) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent1, tempTimetable[i]);
+    } else if (i == 2) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent2, tempTimetable[i]);
+    } else if (i == 3) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent3, tempTimetable[i]);
+    } else if (i == 4) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent4, tempTimetable[i]);
+    } else if (i == 5) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent5, tempTimetable[i]);
+    } else if (i == 6) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent6, tempTimetable[i]);
+    } else if (i == 7) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent7, tempTimetable[i]);
+    } else if (i == 8) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent8, tempTimetable[i]);
+    } else if (i == 9) {
+      singleEventToTimetable(&headblockheadSettings->arbortimetableEvent9, tempTimetable[i]);
+    }
+  }
+}
 
 void WatchyHeadblockhead::drawWatchFace() {
   // If after sunset, switch to night mode.
@@ -119,7 +212,17 @@ void WatchyHeadblockhead::drawWatchFace() {
 
   // If the arbor data is not yet set, or it is the first minute of every hour, update the arbor data.
   if ((currentTime.Minute == 1) || headblockheadSettings->arborattendance == -1.00 || headblockheadSettings->arborpoints == -1) {
-    getArbor(&headblockheadSettings->arborattendance, &headblockheadSettings->arborpoints, &headblockheadSettings->arbortimetable, &headblockheadSettings->arborweek);
+
+    getArbor(&headblockheadSettings->arborattendance, &headblockheadSettings->arborpoints, &tempTimetable, &headblockheadSettings->arborweek);
+    tempToTimetable();
+  } else {
+    timetableToTemp();
+  }
+
+  Serial.println("attendance: " + String(headblockheadSettings->arborattendance));
+  Serial.println("points: " + String(headblockheadSettings->arborpoints));
+  for (int i = 0; i < tempTimetable.size(); i++) {
+    Serial.println("event " + String(i) + ": " + String(tempTimetable[i].eventStart) + " " + String(tempTimetable[i].eventEnd) + " " + String(tempTimetable[i].eventLocation) + " " + String(tempTimetable[i].eventEvent));
   }
 
   // If we are on the home screen, draw the home screen.
@@ -133,20 +236,23 @@ void WatchyHeadblockhead::drawWatchFace() {
 }
 
 void WatchyHeadblockhead::drawMenuScreen() {
+  // Title
   display.setFont(&Ramabhadra_Regular25pt7b);
   display.setCursor(0, 37);
   display.print("Menu");
 
+  // Decorative lines
   display.drawFastHLine(0, 43, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawFastHLine(0, 44, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawFastHLine(0, 45, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawLine(125, 43, 145, 23, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.drawLine(125, 44, 145, 24, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.drawLine(125, 45, 145, 25, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(125, 44, 146, 24, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(125, 45, 147, 25, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawFastHLine(145, 23, 55, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawFastHLine(146, 24, 54, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawFastHLine(147, 25, 53, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
+  // Top Right: Time
   display.setFont(&DSEG7_Classic_Regular_15);
   display.setCursor(143, 20);
 
@@ -167,8 +273,10 @@ void WatchyHeadblockhead::drawMenuScreen() {
   display.println(currentTime.Minute);
 
   display.setFont(&Seven_Segment10pt7b);
-  display.setCursor(0, 60);
-  display.print(headblockheadSettings->currentMenuItem);
+  for (int i = 0; i < menuItems.size(); i++) {
+    display.setCursor(15, 70 + (i * 30));
+    display.print(menuItems[i]);
+  }
 }
 
 void WatchyHeadblockhead::drawHomeScreen() {
@@ -325,13 +433,12 @@ void WatchyHeadblockhead::drawSteps(int x, int y, uint32_t step) {
   display.println(s);
 }
 
-void WatchyHeadblockhead::getArbor(float *attendance, int *points, std::vector<String> *timetable, String *week) {
+void WatchyHeadblockhead::getArbor(double *attendance, int *points, std::vector<arborTimetableEvent> *timetable, String *week) {
   if (connectWiFi()) {
     HTTPClient http;
     http.setConnectTimeout(3000); // 3 second max timeout
-    String arborURL = headblockheadSettings->arborURL;
     http.begin(arborURL.c_str());
-    http.addHeader("x-api-key", headblockheadSettings->arborAPIKey);
+    http.addHeader("x-api-key", arborAPIKey);
     int httpResponseCode = http.GET();
     if (httpResponseCode == 200) {
       String payload = http.getString();
@@ -340,17 +447,22 @@ void WatchyHeadblockhead::getArbor(float *attendance, int *points, std::vector<S
         Serial.println("Parsing input failed!");
         return;
       }
-      *attendance = strtof(JSON.stringify(responseObject["attendance"]).c_str(), nullptr);
+      *attendance = double(responseObject["attendance"]);
       *points = (int)responseObject["points"];
-      int i = 0;
-      while (i < 10) {
-        if (JSON.stringify(responseObject["timetable"][i]) == "" || JSON.stringify(responseObject["timetable"][i]) == "undefined") {
+      *week = JSON.stringify(responseObject["week"]);
+      for (int i = 0; i < 10; i++) {
+        if (JSON.stringify(responseObject["timetable"][i]) == "" || JSON.stringify(responseObject["timetable"][i]) == "undefined" || JSON.stringify(responseObject["timetable"][i]) == "null") {
+          Serial.println("Timetable event " + String(i) + " is empty!");
           break;
         }
-        timetable->push_back(JSON.stringify(responseObject["timetable"][i]));
-        i++;
+        arborTimetableEvent event;
+        event.eventStart = (int)responseObject["timetable"][i]["event_start"];
+        event.eventEnd = (int)responseObject["timetable"][i]["event_end"];
+        event.eventLocation = JSON.stringify(responseObject["timetable"][i]["location"]);
+        event.eventEvent = JSON.stringify(responseObject["timetable"][i]["event"]);
+        Serial.println("Event " + String(i) + ": " + event.eventEvent + " at " + event.eventLocation + " from " + String(event.eventStart) + " to " + String(event.eventEnd));
+        (*timetable).push_back(event);
       }
-      *week = JSON.stringify(responseObject["week"]);
     } else {
       // http error
     }
@@ -363,7 +475,7 @@ void WatchyHeadblockhead::getArbor(float *attendance, int *points, std::vector<S
 }
 
 // headblockheadSettings->sunRiseTime and headblockheadSettings->sunSetTime are ints of seconds since midnight
-void WatchyHeadblockhead::getSunriseSunset(float *sunRiseTime, float *sunSetTime) {
+void WatchyHeadblockhead::getSunriseSunset(int *sunRiseTime, int *sunSetTime) {
   // Get OpenWeatherMap data
   if (connectWiFi()) {
     HTTPClient http;              // Use Weather API for live data if WiFi is connected
@@ -391,9 +503,14 @@ void WatchyHeadblockhead::getSunriseSunset(float *sunRiseTime, float *sunSetTime
     // turn off radios
     WiFi.mode(WIFI_OFF);
     btStop();
-  } else {                // No WiFi, use clock for sunrise/sunset
-    *sunRiseTime = 25200; // 7am
-    *sunSetTime = 72000;  // 8pm
+  } else { // No WiFi, use clock for sunrise/sunset
+    // If sunrise/sunset times are not set, use 7am/7pm
+    if (headblockheadSettings->sunRiseTime == 0) {
+      *sunRiseTime = 25200;
+    }
+    if (headblockheadSettings->sunSetTime == 0) {
+      *sunSetTime = 72000; // 8pm
+    }
   }
 }
 

@@ -2,8 +2,6 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#define ARDUINO_WATCHY_V20
-
 // Weather Settings
 #define CITY_ID "5128581"                                                       // New York City https://openweathermap.org/current#cityid
 #define OPENWEATHERMAP_APIKEY "f058fe1cad2afe8e2ddc5d063a64cecb"                // use your own API key :)

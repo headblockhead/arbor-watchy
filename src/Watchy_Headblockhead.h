@@ -13,16 +13,30 @@
 
 enum watchyHeadblockheadState { Home, Menu, Arbor };
 
+typedef struct arborTimetableEvent {
+  int eventStart;
+  int eventEnd;
+  String eventEvent;
+  String eventLocation;
+} arborTimetableEvent;
+
 typedef struct watchyHeadblockheadSettings {
   bool is12Hrs;
-  float sunRiseTime;
-  float sunSetTime;
-  float arborattendance;
+  int sunRiseTime;
+  int sunSetTime;
+  double arborattendance;
   int arborpoints;
-  std::vector<String> arbortimetable;
+  uint32_t arbortimetableEvent0[74];
+  uint32_t arbortimetableEvent1[74];
+  uint32_t arbortimetableEvent2[74];
+  uint32_t arbortimetableEvent3[74];
+  uint32_t arbortimetableEvent4[74];
+  uint32_t arbortimetableEvent5[74];
+  uint32_t arbortimetableEvent6[74];
+  uint32_t arbortimetableEvent7[74];
+  uint32_t arbortimetableEvent8[74];
+  uint32_t arbortimetableEvent9[74];
   String arborweek;
-  String arborURL;
-  String arborAPIKey;
   watchyHeadblockheadState state;
   int currentMenuItem;
 } watchyHeadblockheadSettings;
@@ -32,11 +46,17 @@ class WatchyHeadblockhead : public Watchy {
 
 public:
   watchyHeadblockheadSettings *headblockheadSettings;
-  void getArbor(float *attendance, int *points, std::vector<String> *timetable, String *week);
+  String arborURL;
+  String arborAPIKey;
+  void timetableToTemp();
+  void tempToTimetable();
+  void singleTimetableToEvent(uint32_t timetable[74], arborTimetableEvent *event);
+  void singleEventToTimetable(uint32_t (*timetable)[74], arborTimetableEvent event);
+  void getArbor(double *attendance, int *points, std::vector<arborTimetableEvent> *timetable, String *week);
   void drawWatchFace();
   void drawHomeScreen();
   void drawMenuScreen();
-  void getSunriseSunset(float *sunRiseTime, float *sunSetTime);
+  void getSunriseSunset(int *sunRiseTime, int *sunSetTime);
   void drawSunriseSunset(int x, int y, int sunRiseTime, int sunSetTime);
   void drawTime(int x, int y);
   void drawDate(int x, int y);
