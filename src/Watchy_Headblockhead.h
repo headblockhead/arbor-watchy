@@ -8,10 +8,11 @@
 #include "DSEG7_Classic_Regular_39.h"
 #include "Ramabhadra_Regular25pt7b.h"
 #include "Ramabhadra_Regular4pt7b.h"
+#include "Ramabhadra_Regular7pt7b.h"
 #include "Seven_Segment10pt7b.h"
 #include "icons.h"
 
-enum watchyHeadblockheadState { Home, Menu, Arbor };
+enum watchyHeadblockheadState { Home, Menu, ArborAlert };
 
 typedef struct arborTimetableEvent {
   int eventStart;
@@ -56,6 +57,7 @@ public:
   void drawWatchFace();
   void drawHomeScreen();
   void drawMenuScreen();
+  void drawArborAlertScreen(int eventStart, int eventEnd, String eventLocation, String eventEvent);
   void getSunriseSunset(int *sunRiseTime, int *sunSetTime);
   void drawSunriseSunset(int x, int y, int sunRiseTime, int sunSetTime);
   void drawTime(int x, int y);

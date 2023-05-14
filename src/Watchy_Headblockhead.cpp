@@ -20,7 +20,7 @@ void WatchyHeadblockhead::handleButtonPress() {
       // Click a menu item.
       if (headblockheadSettings->currentMenuItem == 0) {
         // First item: open Watchy menu.
-        Watchy::showMenu(0, false);
+        Watchy::showMenu(menuIndex, false);
         return;
       } else if (headblockheadSettings->currentMenuItem == 1) {
         // Second item: toggle 12/24 hour mode.
@@ -32,6 +32,12 @@ void WatchyHeadblockhead::handleButtonPress() {
     } else if (headblockheadSettings->state == Home) {
       // If we are on the home screen, open the menu.
       headblockheadSettings->state = Menu;
+      drawWatchFace();
+      Watchy::showWatchFace(false);
+      return;
+    } else if (headblockheadSettings->state == ArborAlert) {
+      // If we are on the arbor alert screen, go back to the home screen.
+      headblockheadSettings->state = Home;
       drawWatchFace();
       Watchy::showWatchFace(false);
       return;
@@ -55,6 +61,8 @@ void WatchyHeadblockhead::handleButtonPress() {
       return;
     } else if (headblockheadSettings->state == Home) {
       // If we are on the home screen, do nothing.
+    } else if (headblockheadSettings->state == ArborAlert) {
+      // If we are on the Arbor Alert screen, do nothing.
     } else {
       // Otherwise, pass the button press to the default handler.
       Watchy::handleButtonPress();
@@ -74,6 +82,8 @@ void WatchyHeadblockhead::handleButtonPress() {
       return;
     } else if (headblockheadSettings->state == Home) {
       // If on the home screen, do nothing.
+    } else if (headblockheadSettings->state == ArborAlert) {
+      // If on the arbor alert screen, do nothing.
     } else {
       // Otherwise, pass the button press to the default handler.
       Watchy::handleButtonPress();
@@ -89,13 +99,24 @@ void WatchyHeadblockhead::handleButtonPress() {
       return;
     } else if (headblockheadSettings->state == Home) {
       // If on the home screen, to nothing.
+    } else if (headblockheadSettings->state == ArborAlert) {
+      // Go back to the home screen.
+      headblockheadSettings->state = Home;
+      drawWatchFace();              // Redraw the watchface.
+      Watchy::showWatchFace(false); // Apply the changes - false for full refresh.
     } else {
       // Otherwise, let the default button handling take over.
       Watchy::handleButtonPress();
       return;
     }
+  } else { // No buttons pressed.
+    if (headblockheadSettings->state == ArborAlert) {
+      headblockheadSettings->state = Menu;
+      drawWatchFace();
+      Watchy::showWatchFace(false);
+      return;
+    }
   }
-
   drawWatchFace();             // Redraw the watchface.
   Watchy::showWatchFace(true); // Apply the changes - true for partial refresh.
   return;
@@ -212,7 +233,6 @@ void WatchyHeadblockhead::drawWatchFace() {
 
   // If the arbor data is not yet set, or it is the first minute of every hour, update the arbor data.
   if ((currentTime.Minute == 1) || headblockheadSettings->arborattendance == -1.00 || headblockheadSettings->arborpoints == -1) {
-
     getArbor(&headblockheadSettings->arborattendance, &headblockheadSettings->arborpoints, &tempTimetable, &headblockheadSettings->arborweek);
     tempToTimetable();
   } else {
@@ -221,8 +241,25 @@ void WatchyHeadblockhead::drawWatchFace() {
 
   Serial.println("attendance: " + String(headblockheadSettings->arborattendance));
   Serial.println("points: " + String(headblockheadSettings->arborpoints));
+
+  int currentArborEventStart = 0;
+  int currentArborEventEnd = 0;
+  String currentArborEventLocation = "0";
+  String currentArborEventEvent = "0";
+
   for (int i = 0; i < tempTimetable.size(); i++) {
     Serial.println("event " + String(i) + ": " + String(tempTimetable[i].eventStart) + " " + String(tempTimetable[i].eventEnd) + " " + String(tempTimetable[i].eventLocation) + " " + String(tempTimetable[i].eventEvent));
+    if (tempTimetable[i].eventEnd == 0) {
+      continue;
+    }
+    if (((currentTime.Second) + (60 * currentTime.Minute) + (60 * 60 * currentTime.Hour)) == tempTimetable[i].eventStart) {
+      Serial.println("event " + String(i) + " starts now!");
+      currentArborEventStart = tempTimetable[i].eventStart;
+      currentArborEventEnd = tempTimetable[i].eventEnd;
+      currentArborEventLocation = String(tempTimetable[i].eventLocation);
+      currentArborEventEvent = String(tempTimetable[i].eventEvent);
+      headblockheadSettings->state = ArborAlert;
+    }
   }
 
   // If we are on the home screen, draw the home screen.
@@ -230,6 +267,9 @@ void WatchyHeadblockhead::drawWatchFace() {
     drawHomeScreen();
   } else if (headblockheadSettings->state == Menu) {
     drawMenuScreen();
+  } else if (headblockheadSettings->state == ArborAlert) {
+    vibMotor(100, 20);
+    drawArborAlertScreen(currentArborEventStart, currentArborEventEnd, currentArborEventLocation, currentArborEventEvent);
   }
 
   return;
@@ -246,11 +286,11 @@ void WatchyHeadblockhead::drawMenuScreen() {
   display.drawFastHLine(0, 44, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawFastHLine(0, 45, 125, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawLine(125, 43, 145, 23, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.drawLine(125, 44, 146, 24, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.drawLine(125, 45, 147, 25, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(125, 44, 145, 24, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawLine(125, 45, 145, 25, isDark ? GxEPD_WHITE : GxEPD_BLACK);
   display.drawFastHLine(145, 23, 55, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.drawFastHLine(146, 24, 54, isDark ? GxEPD_WHITE : GxEPD_BLACK);
-  display.drawFastHLine(147, 25, 53, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawFastHLine(145, 24, 54, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+  display.drawFastHLine(145, 25, 53, isDark ? GxEPD_WHITE : GxEPD_BLACK);
 
   // Top Right: Time
   display.setFont(&DSEG7_Classic_Regular_15);
@@ -274,8 +314,13 @@ void WatchyHeadblockhead::drawMenuScreen() {
 
   display.setFont(&Seven_Segment10pt7b);
   for (int i = 0; i < menuItems.size(); i++) {
-    display.setCursor(15, 70 + (i * 30));
-    display.print(menuItems[i]);
+    if (i == headblockheadSettings->currentMenuItem) {
+      display.setCursor(15, 70 + (i * 30));
+      display.print("> " + menuItems[i]);
+    } else {
+      display.setCursor(5, 70 + (i * 30));
+      display.print("  " + menuItems[i]);
+    }
   }
 }
 
@@ -348,6 +393,44 @@ void WatchyHeadblockhead::drawHomeScreen() {
   display.setFont(&Ramabhadra_Regular4pt7b);
   display.setCursor(162, 165);
   display.print("DOWN");
+}
+
+void WatchyHeadblockhead::drawArborAlertScreen(int eventStart, int eventEnd, String eventLocation, String eventEvent) {
+  display.setFont(&Ramabhadra_Regular7pt7b);
+  display.setCursor(1, 12);
+  display.println("Next Lesson!");
+  display.drawFastHLine(0, 15, 200, isDark ? GxEPD_WHITE : GxEPD_BLACK);
+
+  if (eventLocation.length() > 4) {
+    display.setFont(&Seven_Segment10pt7b);
+    display.setCursor((200 - (10 * eventLocation.length())) / 2, 75);
+  } else {
+    display.setFont(&DSEG7_Classic_Bold_53);
+    display.setCursor(13, 110);
+  }
+  display.println(eventLocation);
+
+  display.setFont(&Ramabhadra_Regular7pt7b);
+  display.setCursor((200 - (7 * eventEvent.length())) / 2, 130);
+  display.println(eventEvent);
+
+  display.setFont(&Seven_Segment10pt7b);
+  display.setCursor(45, 175);
+  char s[6];
+  if (headblockheadSettings->is12Hrs) {
+    sprintf(s, "%02d:%02d", ((eventStart / 3600) % 12), (eventStart / 60) % 60);
+  } else {
+    sprintf(s, "%02d:%02d", (eventStart / 3600) % 24, (eventStart / 60) % 60);
+  }
+  char e[6];
+  if (headblockheadSettings->is12Hrs) {
+    sprintf(e, "%02d:%02d", ((eventEnd / 3600) % 12), (eventEnd / 60) % 60);
+  } else {
+    sprintf(e, "%02d:%02d", (eventEnd / 3600) % 24, (eventEnd / 60) % 60);
+  }
+  display.print(s);
+  display.print(" - ");
+  display.print(e);
 }
 
 void WatchyHeadblockhead::drawBattery(int x, int y) {
@@ -447,6 +530,7 @@ void WatchyHeadblockhead::getArbor(double *attendance, int *points, std::vector<
         Serial.println("Parsing input failed!");
         return;
       }
+      timetable->clear();
       *attendance = double(responseObject["attendance"]);
       *points = (int)responseObject["points"];
       *week = JSON.stringify(responseObject["week"]);
