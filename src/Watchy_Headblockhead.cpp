@@ -40,7 +40,7 @@ void WatchyHeadblockhead::handleButtonPress() {
       headblockheadSettings->state = Home;
       drawWatchFace();
       Watchy::showWatchFace(false);
-      return;
+            return;
     } else {
       // Otherwise, pass the button press to Watchy.
       Watchy::handleButtonPress();
@@ -63,6 +63,7 @@ void WatchyHeadblockhead::handleButtonPress() {
       // If we are on the home screen, do nothing.
     } else if (headblockheadSettings->state == ArborAlert) {
       // If we are on the Arbor Alert screen, do nothing.
+      return;
     } else {
       // Otherwise, pass the button press to the default handler.
       Watchy::handleButtonPress();
@@ -84,6 +85,7 @@ void WatchyHeadblockhead::handleButtonPress() {
       // If on the home screen, do nothing.
     } else if (headblockheadSettings->state == ArborAlert) {
       // If on the arbor alert screen, do nothing.
+      return;
     } else {
       // Otherwise, pass the button press to the default handler.
       Watchy::handleButtonPress();
@@ -100,20 +102,11 @@ void WatchyHeadblockhead::handleButtonPress() {
     } else if (headblockheadSettings->state == Home) {
       // If on the home screen, to nothing.
     } else if (headblockheadSettings->state == ArborAlert) {
-      // Go back to the home screen.
-      headblockheadSettings->state = Home;
-      drawWatchFace();              // Redraw the watchface.
-      Watchy::showWatchFace(false); // Apply the changes - false for full refresh.
+      // If on the arbor alert screen, do nothing.
+      return;
     } else {
       // Otherwise, let the default button handling take over.
       Watchy::handleButtonPress();
-      return;
-    }
-  } else { // No buttons pressed.
-    if (headblockheadSettings->state == ArborAlert) {
-      headblockheadSettings->state = Menu;
-      drawWatchFace();
-      Watchy::showWatchFace(false);
       return;
     }
   }
@@ -190,7 +183,34 @@ void WatchyHeadblockhead::singleEventToTimetable(uint32_t (*timetable)[74], arbo
     (*timetable)[33 + j] = event.eventEvent[j];
   }
 }
+void WatchyHeadblockhead::clearSingleEvent(uint32_t (*timetable)[74]) {
+  timetable = {0};
+}
 void WatchyHeadblockhead::tempToTimetable() {
+  // Clear the timetable.
+  for (int i = 0; i < 10; i++) {
+    if (i == 0) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent0);
+    } else if (i == 1) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent1);
+    } else if (i == 2) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent2);
+    } else if (i == 3) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent3);
+    } else if (i == 4) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent4);
+    } else if (i == 5) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent5);
+    } else if (i == 6) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent6);
+    } else if (i == 7) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent7);
+    } else if (i == 8) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent8);
+    } else if (i == 9) {
+      clearSingleEvent(&headblockheadSettings->arbortimetableEvent9);
+    }
+  }
   for (int i = 0; i < tempTimetable.size(); i++) {
     if (i == 0) {
       singleEventToTimetable(&headblockheadSettings->arbortimetableEvent0, tempTimetable[i]);
@@ -252,14 +272,18 @@ void WatchyHeadblockhead::drawWatchFace() {
     if (tempTimetable[i].eventEnd == 0) {
       continue;
     }
-    if (((currentTime.Second) + (60 * currentTime.Minute) + (60 * 60 * currentTime.Hour)) == tempTimetable[i].eventStart) {
-      Serial.println("event " + String(i) + " starts now!");
+    if (((currentTime.Second) + (60 * (currentTime.Minute + 3)) + (60 * 60 * currentTime.Hour)) == tempTimetable[i].eventStart) {
+      Serial.println("event " + String(i) + " starts in 3 mins!");
       currentArborEventStart = tempTimetable[i].eventStart;
       currentArborEventEnd = tempTimetable[i].eventEnd;
       currentArborEventLocation = String(tempTimetable[i].eventLocation);
       currentArborEventEvent = String(tempTimetable[i].eventEvent);
-      headblockheadSettings->state = ArborAlert;
+           headblockheadSettings->state = ArborAlert;
     }
+  }
+
+  if (currentArborEventEnd == 0 && currentArborEventStart == 0 && headblockheadSettings->state == ArborAlert) {
+    headblockheadSettings->state = Home;
   }
 
   // If we are on the home screen, draw the home screen.
@@ -543,9 +567,9 @@ void WatchyHeadblockhead::getArbor(double *attendance, int *points, std::vector<
         event.eventStart = (int)responseObject["timetable"][i]["event_start"];
         event.eventEnd = (int)responseObject["timetable"][i]["event_end"];
         event.eventLocation = JSON.stringify(responseObject["timetable"][i]["location"]);
-        event.eventLocation.substring(1, event.eventLocation.length() - 1); // Delete the quotes from the string
+        event.eventLocation.replace("\"", ""); // remove quotes
         event.eventEvent = JSON.stringify(responseObject["timetable"][i]["event"]);
-        event.eventEvent.substring(1, event.eventEvent.length() - 1); // Delete the quotes from the string
+        event.eventEvent.replace("\"", ""); // remove quotes
         Serial.println("Event " + String(i) + ": " + event.eventEvent + " at " + event.eventLocation + " from " + String(event.eventStart) + " to " + String(event.eventEnd));
         (*timetable).push_back(event);
       }

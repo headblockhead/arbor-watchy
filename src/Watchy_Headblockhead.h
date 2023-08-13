@@ -50,6 +50,7 @@ public:
   String arborURL;
   String arborAPIKey;
   void timetableToTemp();
+  void clearSingleEvent(uint32_t (*timetable)[74]);
   void tempToTimetable();
   void singleTimetableToEvent(uint32_t timetable[74], arborTimetableEvent *event);
   void singleEventToTimetable(uint32_t (*timetable)[74], arborTimetableEvent event);
