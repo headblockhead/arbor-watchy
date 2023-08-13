@@ -1,5 +1,5 @@
-# custom-watchy-face
-A custom Watchy face - WIP
+# ArborWatchy
+A custom Watchy face that displays an Arbor timetable.
 
 ## Tasks
 ### Upload
